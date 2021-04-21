@@ -1,0 +1,10 @@
+- name: Run ec2.yml playbook
+  import_playbook: ec2.yml
+
+- hosts: localhost
+  tasks:
+    - meta: refresh_inventory
+
+- name: Run webserver and loadbalancer playbook
+  import_playbook: webserver.yml
+

@@ -1,0 +1,51 @@
+- name: Playbook for launching ec2 instances
+  hosts: localhost
+  vars_prompt:
+    - name: no_count  
+      prompt: "Number of backend webserver instances: "
+      private: no
+
+  vars_files: 
+    - aws_keys.yml
+
+  tasks:
+    - name: Install required python library
+      pip:
+        name: boto
+        state: present
+
+    - name: Get instance private ip
+      command: aws ec2 describe-instances --region us-east-1 --filter Name=tag:Name,Values="loadbalancer" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: instance_ip
+
+
+    - name: Launch webserver instances 
+      ec2:
+        image: ami-0742b4e673072066f
+        instance_type: t2.micro
+        count: "{{ no_count }}"
+        region: us-east-1
+        vpc_subnet_id: subnet-a8e996e5
+        group_id: sg-0c5c1a9ca406648ac
+        instance_tags:
+          Name: "webserver"
+        key_name: keyhadoop
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        wait: yes   
+              
+    - name: Launch loadbalancer instance
+      ec2:
+        image: ami-0742b4e673072066f
+        instance_type: t2.micro
+        region: us-east-1
+        vpc_subnet_id: subnet-a8e996e5
+        group_id: sg-0c5c1a9ca406648ac
+        instance_tags:
+          Name: "loadbalancer"
+        key_name: keyhadoop
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        wait: yes
+      when: instance_ip.stdout == ''
+ 
